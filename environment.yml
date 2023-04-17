@@ -1,4 +1,4 @@
-name: /media/HDD/Documents/BCC/3-periodo/mc/.conda
+name: .conda
 channels:
   - conda-forge
   - defaults
@@ -106,4 +106,3 @@ dependencies:
       - matplotlib==3.7.1
       - pillow==9.5.0
       - pyparsing==3.0.9
-prefix: /media/HDD/Documents/BCC/3-periodo/mc/.conda
