@@ -23,8 +23,8 @@ int main() {
                 rem(&root, val);
                 t = clock() - t;
                 break;
+            case 3:
+                printf("%.15lf\n", ((double) t) / CLOCKS_PER_SEC);
         }
-        if (op != 0)
-            printf("%.15lf\n", ((double) t) / CLOCKS_PER_SEC);
     } while (op != 0);
 }

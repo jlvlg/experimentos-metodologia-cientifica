@@ -36,13 +36,13 @@ def generate_inputs(path, size):
             with open(p(path, 'end_remove', 'worst_case.in'), 'w') as end_remove:
                 nums = list(range(1, size + 1))
                 for num in nums:
-                    insert.write(f'1 {num}\n')
+                    insert.write(f'1 {num} 3\n')
                     start_remove.write(f'1 {num}\n')
                     end_remove.write(f'1 {num}\n')
                 for num in nums:
-                    start_remove.write(f'2 {num}\n')
+                    start_remove.write(f'2 {num} 3\n')
                 for num in reversed(nums):
-                    end_remove.write(f'2 {num}\n')
+                    end_remove.write(f'2 {num} 3\n')
                 insert.write('0\n')
                 start_remove.write('0\n')
                 end_remove.write('0\n')
@@ -51,13 +51,13 @@ def generate_inputs(path, size):
             with open(p(path, 'end_remove', 'average_case.in'), 'w') as end_remove:
                 nums = np.random.permutation(size + 1)
                 for num in nums:
-                    insert.write(f'1 {num}\n')
+                    insert.write(f'1 {num} 3\n')
                     start_remove.write(f'1 {num}\n')
                     end_remove.write(f'1 {num}\n')
                 for num in nums:
-                    start_remove.write(f'2 {num}\n')
+                    start_remove.write(f'2 {num} 3\n')
                 for num in reversed(nums):
-                    end_remove.write(f'2 {num}\n')
+                    end_remove.write(f'2 {num} 3\n')
                 insert.write('0\n')
                 start_remove.write('0\n')
                 end_remove.write('0\n')
@@ -71,13 +71,13 @@ def generate_inputs(path, size):
                     div *= 2
                 result = list(dict.fromkeys(result))
                 for num in result:
-                    insert.write(f'1 {num}\n')
+                    insert.write(f'1 {num} 3\n')
                     start_remove.write(f'1 {num}\n')
                     end_remove.write(f'1 {num}\n')
                 for num in result:
-                    start_remove.write(f'2 {num}\n')
+                    start_remove.write(f'2 {num} 3\n')
                 for num in reversed(result):
-                    end_remove.write(f'2 {num}\n')
+                    end_remove.write(f'2 {num} 3\n')
                 insert.write('0\n')
                 start_remove.write('0\n')
                 end_remove.write('0\n')
@@ -87,6 +87,13 @@ def run_script(tree, input, output):
     with open(input) as input_file:
         with open(output, 'w') as output_file:
             subprocess.run(p(trees, tree, f'{tree}.out'), stdin=input_file, stdout=output_file)
+
+def plot(test, case):
+    data = pd.read_csv(p(path, 'outputs', test, f'bst_{case}_case.csv'), header=None).rename(columns={0: 'bst'})
+    data.insert(1, 'avl', pd.read_csv(p(path, 'outputs', test, f'avl_{case}_case.csv'), header=None))
+    data.insert(2, 'rb', pd.read_csv(p(path, 'outputs', test, f'rb_{case}_case.csv'), header=None))
+    (data * 1000).plot(ylabel='Tempo de execução (milisegundos)', xlabel='Número de elementos presentes na árvore')
+    
 
 # %%
 compile_script('bst')
@@ -128,5 +135,20 @@ run_script('rb', f'{path}/inputs/start_remove/best_case.in', f'{path}/outputs/st
 run_script('rb', f'{path}/inputs/end_remove/worst_case.in', f'{path}/outputs/end_remove/rb_worst_case.csv')
 run_script('rb', f'{path}/inputs/end_remove/average_case.in', f'{path}/outputs/end_remove/rb_average_case.csv')
 run_script('rb', f'{path}/inputs/end_remove/best_case.in', f'{path}/outputs/end_remove/rb_best_case.csv')
+
+# %%
+plot('insert', 'worst')
+plot('insert', 'average')
+plot('insert', 'best')
+
+# %%
+plot('start_remove', 'worst')
+plot('start_remove', 'average')
+plot('start_remove', 'best')
+
+# %%
+plot('end_remove', 'worst')
+plot('end_remove', 'average')
+plot('end_remove', 'best')
 
 
