@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.16)
+project(MC C)
+add_subdirectory(util)
+add_subdirectory(trees)
+add_subdirectory(scripts)

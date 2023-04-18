@@ -1,26 +1,49 @@
 #ifndef RB_H
 #define RB_H
 
-#define MAX(a,b) (a > b ? a : b)
+#include "types.h"
+#include "tree.h"
 
-typedef struct node {
-    int v, is_black;
-    struct node *l, *r, *parent;
-} Node;
+/// @file
+/// @brief Red-black implementation of the abstract tree
 
-typedef Node *Tree;
+/// Red-black implementation of the abstract tree
+typedef struct rb_node {
+    Node node;
+    int is_black;
+    struct rb_node *parent;
+} RB_Node;
 
-int children(Tree root);
-int height(Tree root);
-Tree max(Tree root);
-void rotate(Tree *root, Tree p, Tree u, Tree t, Tree rotate_function(Tree node));
-Tree simple_rotation_left_helper(Tree p);
-Tree simple_rotation_right_helper(Tree p);
-void simple_rotation_left(Tree *root, Tree p);
-void simple_rotation_right(Tree *root, Tree p);
-void double_rotation_left(Tree *root, Tree p);
-void double_rotation_right(Tree *root, Tree p);
-void insert(Tree *root, int val);
-void rem(Tree *root, int val);
+/// Pointer to an RB_Node
+typedef RB_Node* RB;
+
+/// Encapsulates functions into the rb namespace
+struct rb_methods {
+    /// @brief Initializes an already allocated memory space
+    /// @param leaf Pointer to allocated memory 
+    /// @param item Item to be sowed
+    /// @return Node containing item
+    RB (*init)(RB leaf, Item item);
+
+    /// @brief Allocates memory and initializes
+    /// @param item Item to be wrapped
+    RB (*create)(Item item);
+
+    /// @brief Inserts a node into a tree
+    /// @param root Tree to be inserted into
+    /// @param leaf Node to be inserted
+    /// @param error Is set to 0 if the operation succeded else 1
+    /// @return Updated tree
+    void (*insert)(RB *root, RB leaf, int *error);
+
+    /// @brief Searches a tree for a node containing an item and removes it
+    /// @param root Tree to be removed from
+    /// @param item Item to be removed
+    /// @param copyfun Function that duplicates an item
+    /// @return Updated tree
+    void (*remove)(RB *root, Item item, Item copyfun(Item));
+};
+
+extern const struct rb_methods rb;
 
 #endif

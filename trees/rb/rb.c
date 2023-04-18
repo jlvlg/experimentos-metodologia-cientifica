@@ -1,112 +1,93 @@
 #include <stdlib.h>
-#include <stdio.h>
+#include "util.h"
+#include "types.h"
+#include "tree.h"
 #include "rb.h"
 
-int children(Tree root) {
-    if (root->l && root->r)
-        return 2;
-    return root->l || root->r;
+static RB init(RB leaf, Item item) {
+    tree.init((Tree) leaf, item);
+    leaf->parent = NULL;
+    leaf->is_black = 0;
+    return leaf;
 }
 
-int height(Tree root) {
-    if (!root)
-        return 0;
-    return MAX(height(root->l), height(root->r)) + 1;
+static RB create(Item item) {
+    return init(util.safe_malloc(sizeof(RB_Node)), item);
 }
 
-Tree max(Tree root) {
-    if (!root || !root->r)
-        return root;
-    return max(root->r);
+static RB parent(RB node) {
+    return node != NULL ? node->parent : NULL;
 }
 
-Tree parent(Tree node) {
-    return node ? node->parent : NULL;
-}
-
-Tree grandparent(Tree node) {
+static RB grandparent(RB node) {
     return parent(parent(node));
 }
 
-int is_black(Tree node) {
-    return !node || node->is_black;
+static int is_black(RB node) {
+    return node == NULL || node->is_black;
 }
 
-int is_red(Tree node) {
+static int is_red(RB node) {
     return !is_black(node);
 }
 
-int is_root(Tree node) {
-    return !parent(node);
+static int is_root(RB node) {
+    return parent(node) == NULL;
 }
 
-int is_left(Tree node) {
-    return !is_root(node) && node->parent->l == node;
+static int is_left(RB node) {
+    return !is_root(node) && ((Tree) node->parent)->l == (Tree) node;
 }
 
-Tree sibling(Tree node) {
-    if (node && !is_root(node)) {
-        Tree tree_parent = parent(node);
-        return is_left(node) ? tree_parent->r : tree_parent->l;
+static RB sibling(RB node) {
+    if (node != NULL && !is_root(node)) {
+        Tree tree_parent = (Tree) parent(node);
+        return (RB) (is_left(node) ? tree_parent->r : tree_parent->l);
     }
     return NULL;
 }
 
-Tree uncle(Tree node) {
+static RB uncle(RB node) {
     return sibling(parent(node));
 }
 
-Tree closest_nephew(Tree node) {
-    Tree sibling_tree = sibling(node);
-    return is_left(node) ? sibling_tree->l : sibling_tree->r;
+static RB closest_nephew(RB node) {
+    Tree sibling_tree = (Tree) sibling(node);
+    return (RB) (is_left(node) ? sibling_tree->l : sibling_tree->r);
 }
 
-Tree farthest_nephew(Tree node) {
-    Tree sibling_tree = sibling(node);
-    return is_left(node) ? sibling_tree->r : sibling_tree->l;
+static RB farthest_nephew(RB node) {
+    Tree sibling_tree = (Tree) sibling(node);
+    return (RB) (is_left(node) ? sibling_tree->r : sibling_tree->l);
 }
 
-void redden(Tree node) {
+static void redden(RB node) {
     node->is_black = 0;
 }
 
-void blacken(Tree node) {
+static void blacken(RB node) {
     node->is_black = 1;
 }
 
-void update_parents(Tree *root, Tree node, Tree new, int left) {
-    if (new) {
+static void update_parents(RB *root, RB node, RB new, int left) {
+    if (new != NULL) {
         new->parent = node->parent;
     }
     if (is_root(node)) {
         *root = new;
     } else if (left)  {
-        node->parent->l = new;
+        ((Tree) node->parent)->l = (Tree) new;
     } else {
-        node->parent->r = new;
+        ((Tree) node->parent)->r = (Tree) new;
     }
 }
 
-Tree simple_rotation_left_helper(Tree p) {
-    Tree u = p->r;
-    p->r = u->l;
-    u->l = p;
-    return u;
-}
-
-Tree simple_rotation_right_helper(Tree p) {
-    Tree u = p->l;
-    p->l = u->r;
-    u->r = p;
-    return u;
-}
-
-void rotate(Tree *root, Tree p, Tree u, Tree t, Tree rotate_function(Tree node)) {
+static void rotate(RB *root, RB p, RB u, RB t, RB rotate_function(RB node)) {
     int left = is_left(p);
 
     u->parent = p->parent;
     p->parent = u;
-    if (t)
+    if (t != NULL)
         t->parent = p;
     
     p = rotate_function(p);
@@ -114,31 +95,31 @@ void rotate(Tree *root, Tree p, Tree u, Tree t, Tree rotate_function(Tree node))
     update_parents(root, p, p, left);
 }
 
-void simple_rotation_left(Tree *root, Tree p) {
-    Tree u = p->r;
-    Tree t = u->l;
+static void simple_rotation_left(RB *root, RB p) {
+    RB u = (RB) ((Tree) p)->r;
+    RB t = (RB) ((Tree) u)->l;
 
-    rotate(root, p, u, t, simple_rotation_left_helper);
+    rotate(root, p, u, t, (RB(*)(RB)) tree.simple_rotation_left);
 }
 
-void simple_rotation_right(Tree *root, Tree p) {
-    Tree u = p->l;
-    Tree t = u->r;
+static void simple_rotation_right(RB *root, RB p) {
+    RB u = (RB) ((Tree) p)->l;
+    RB t = (RB) ((Tree) u)->r;
 
-    rotate(root, p, u, t, simple_rotation_right_helper);
+    rotate(root, p, u, t, (RB(*)(RB)) tree.simple_rotation_right);
 }
 
-void double_rotation_right(Tree *root, Tree p) {
-    simple_rotation_left(root, p->l);
+static void double_rotation_right(RB *root, RB p) {
+    simple_rotation_left(root, (RB) ((Tree) p)->l);
     simple_rotation_right(root, p);
 }
 
-void double_rotation_left(Tree *root, Tree p) {
-    simple_rotation_right(root, p->r);
+static void double_rotation_left(RB *root, RB p) {
+    simple_rotation_right(root, (RB) ((Tree) p)->r);
     simple_rotation_left(root, p);
 }
 
-void adjust(Tree *root, Tree leaf) {
+static void adjust(RB *root, RB leaf) {
     while (is_red(leaf) && is_red(parent(leaf))) {
         if (is_red(uncle(leaf))) {
             blacken(uncle(leaf));
@@ -155,7 +136,7 @@ void adjust(Tree *root, Tree leaf) {
             } else {
                 double_rotation_left(root, grandparent(leaf));
                 blacken(leaf);
-                redden(leaf->l);
+                redden((RB) ((Tree) leaf)->l);
             }
         } else {
             if (!is_left(parent(leaf))) {
@@ -165,31 +146,31 @@ void adjust(Tree *root, Tree leaf) {
             } else {
                 double_rotation_right(root, grandparent(leaf));
                 blacken(leaf);
-                redden(leaf->r);
+                redden((RB) ((Tree) leaf)->r);
             }
         }
     }
     blacken(*root);
 }
 
-void remove_double_black(Tree *root, Tree node, int nil) {
+static void remove_double_black(RB *root, RB node, int nil) {
     if (nil) {
         update_parents(root, node, NULL, is_left(node));
-        free(node);
+        tree.kill((Tree) node);
     }
 }
 
-void handle_double_black(Tree *root, Tree node, int nil) {
+static void handle_double_black(RB *root, RB node, int nil) {
     if (is_root(node)) {
         remove_double_black(root, node, nil);
         return;
     }
     int left = is_left(node);
-    Tree parent_node = parent(node);
-    Tree grandparent_node = parent(parent_node);
-    Tree sibling_node = sibling(node);
-    Tree closest_nephew_node = closest_nephew(node);
-    Tree farthest_nephew_node = farthest_nephew(node);
+    RB parent_node = parent(node);
+    RB grandparent_node = parent(parent_node);
+    RB sibling_node = sibling(node);
+    RB closest_nephew_node = closest_nephew(node);
+    RB farthest_nephew_node = farthest_nephew(node);
     if (is_black(parent_node) &&
         is_red(sibling_node) &&
         is_black(closest_nephew_node) &&
@@ -250,70 +231,90 @@ void handle_double_black(Tree *root, Tree node, int nil) {
         }
 }
 
-void insert(Tree *root, int val) {
+static void insert(RB *root, RB leaf, int *error) {
     int cmp;
-    Tree track = NULL;
+    Tree tree_leaf = (Tree) leaf, track = NULL;
+
+    *error = 0;
     
-    for (Tree search = *root; search;) {
+    for (Tree search = (Tree) *root; search != NULL;) {
         track = search;
-        cmp = val > track->v;
+        cmp = types.cmp(tree_leaf->item, track->item);
 
-        if (cmp)
-            search = search->r;
-        else
-            search = search->l;
+        switch (cmp) {
+            case 0:
+                *error = 1;
+                tree.kill((Tree) leaf);
+                return;
+            case -1:
+                search = search->l;
+                break;
+            case 1:
+                search = search->r;
+        }
     }
 
-    Tree leaf = malloc(sizeof(Node));
-    if (!leaf) {
-        printf("Program ran out of memory");
-        exit(1);
-    }
-    leaf->is_black = 0;
-    leaf->l = leaf->r = NULL;
-    leaf->parent = track;
+    leaf->parent = (RB) track;
 
-    if (!track) {
+    if (track == NULL) {
         *root = leaf;
     } else {
-        if (cmp)
-            track->r = leaf;
-        else
-            track->l = leaf;
+        switch (cmp) {
+            case 0:
+                *error = 1;
+                tree.kill((Tree) leaf);
+                return;
+            case -1:
+                track->l = (Tree) leaf;
+                break;
+            case 1:
+                track->r = (Tree) leaf;
+        }
     }
     
     adjust(root, leaf);
 }
 
-void rem(Tree *root, int val) {
-    for (Tree search = *root; search;) {
-        if (val == search->v) {
-            switch (children(search)) {
-                case 0:
-                    if (is_root(search) || is_red(search)) {
-                        update_parents(root, search, NULL, is_left(search));
-                        free(search);
-                    } else {
-                        handle_double_black(root, search, 1);
+static void remove(RB *root, Item item, Item copyfun(Item)) {
+    for (Tree search = (Tree) *root; search != NULL;) {
+        switch (types.cmp(item, search->item)) {
+            case 0:
+                switch (tree.children(search)) {
+                    case 0:
+                        if (is_root((RB) search) || is_red((RB) search)) {
+                            update_parents(root, (RB) search, NULL, is_left((RB) search));
+                            tree.kill(search);
+                        } else {
+                            handle_double_black(root, (RB) search, 1);
+                        }
+                        break;
+                    case 1: {
+                        RB child = (RB) (search->l != NULL ? search->l : search->r);
+                        blacken(child);
+                        update_parents(root, (RB) search, child, is_left((RB) search));
+                        tree.kill(search);
+                    } break;
+                    case 2: {
+                        Item child_item = copyfun(tree.max(search->l)->item);
+                        remove(root, child_item, copyfun);
+                        types.destroy(search->item);
+                        search->item = child_item;
                     }
-                    break;
-                case 1: {
-                    Tree child = (search->l ? search->l : search->r);
-                    blacken(child);
-                    update_parents(root, search, child, is_left(search));
-                    free(search);
                 } break;
-                case 2: {
-                    int child = max(search->l)->v;
-                    rem(root, child);
-                    search->v = child;
-                }
-            }
-        } else {
-            if (val > search->v)
-                search = search->r;
-            else
+            case -1:
                 search = search->l;
+                continue;
+            case 1:
+                search = search->r;
+                continue;
         }
+        break;
     }
 }
+
+const struct rb_methods rb = {
+    .init = init,
+    .create = create,
+    .insert = insert,
+    .remove = remove
+};
